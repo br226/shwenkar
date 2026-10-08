@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0b6cff">
-<title>ڕێبەر · Rebar</title>
+<title>شوێنکار · Shwenkar</title>
 <style>
 /* required styles */
 
@@ -669,8 +669,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	}
 
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#ffffff; --fg:#14213d; --muted:#6b7a90; --card:#ffffffee; --line:#e3e8ef;
@@ -680,7 +678,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 body.dark{ --bg:#121a2b; --fg:#eaf0ff; --muted:#93a3bd; --card:#162036ee; --line:#26324d; }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
-  font-family:'Vazirmatn',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;touch-action:manipulation}
+  font-family:system-ui,-apple-system,'Segoe UI','Noto Sans Arabic','Noto Naskh Arabic',Tahoma,sans-serif;touch-action:manipulation}
 button,input{font-family:inherit;font-size:16px;color:inherit}
 #map{position:absolute;inset:0;z-index:0}
 .leaflet-control-attribution{font-size:10px!important}
@@ -760,6 +758,14 @@ button,input{font-family:inherit;font-size:16px;color:inherit}
 .pop button{border:0;border-radius:10px;padding:7px 10px;margin:2px;cursor:pointer;font-family:inherit;font-size:13px;background:#e8eef9}
 .pop button.ok{background:#d9f6ee}
 .leaflet-popup-content{margin:12px 14px}
+#locHelp{position:absolute;inset:0;z-index:2500;background:rgba(10,20,40,.55);display:none;align-items:flex-end}
+#locHelp .box{width:100%;max-height:88vh;overflow:auto;background:var(--bg);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+#locHelp h3{margin:0 0 6px;text-align:center}
+#locHelp p{margin:6px 0 12px;color:var(--muted);font-size:14px;text-align:center}
+#locHelp details{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+#locHelp summary{font-weight:600;cursor:pointer}
+#locHelp ol{margin:8px 0 0;padding-inline-start:22px;font-size:14px;line-height:1.9}
+#locHelp .btns{display:flex;gap:8px;margin-top:10px}#locHelp .btns .btn{flex:1}
 #toast{position:absolute;z-index:3000;left:50%;transform:translateX(-50%);top:calc(80px + env(safe-area-inset-top));
   background:#14213d;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;display:none;max-width:88%;text-align:center}
 #warn{position:absolute;z-index:1500;inset-inline:10px;top:calc(76px + env(safe-area-inset-top));background:var(--warn);color:#201500;
@@ -811,18 +817,21 @@ button,input{font-family:inherit;font-size:16px;color:inherit}
     <button class="btn ghost" id="btnCancel" data-t="cancel"></button>
   </div>
 </div>
+<div id="locHelp"><div class="box">
+  <h3 data-t="locTitle"></h3><p data-t="locIntro"></p>
+  <div id="locSteps"></div><p data-t="locHttps"></p>
+  <div class="btns"><button class="btn" id="btnLocRetry" data-t="retry"></button><button class="btn ghost" id="btnLocClose" data-t="close"></button></div>
+</div></div>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============================================================
-   CONFIG — put your Supabase values here to share reports between
-   all users. Leave empty and reports are saved on this device only.
-   (Run setup.sql once in the Supabase SQL editor.)
+   CONFIG — Supabase project (anon key is public by design; security
+   is enforced by the row-level-security rules in setup.sql).
    ============================================================ */
-const SUPABASE_URL = '';
-const SUPABASE_KEY = '';
+const SUPABASE_URL = 'https://ulkrsgvfmflqgwizigna.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsa3JzZ3ZmbWZscWd3aXppZ25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0ODM1NjEsImV4cCI6MjEwNzA1OTU2MX0.KGrxgFtXpLKZCyv3vr_PnivvL45qQ4dbnMu8hg7Ctrs';
 
 /* ============ TEXT (Kurdish Sorani main / English) ============ */
 const T = {
@@ -839,6 +848,17 @@ const T = {
     confirms:'پشتڕاستکرایەوە', ahead:'لە پێشەوەیە', offline:'تەنها لەسەر ئەم ئامێرە (Supabase دانەنراوە)',
     arrived:'گەیشتیت بە مەبەست', noVoice:'دەنگی کوردی نییە، دەنگی ئینگلیزی بەکاردێت', dest:'مەبەست', routeTo:'ڕێڕەو',
     fast:'خێراترین', alt:'ڕێگای تر', arriveAt:'گەیشتن',
+    retry:'دووبارە هەوڵبدەرەوە', close:'داخستن', locUnavail:'GPS بەردەست نییە، دڵنیابەرەوە لە چالاککردنی شوێن لە مۆبایلەکەت',
+    dbErr:'نەتوانرا پەیوەندی بە سێرڤەرەوە بکرێت، ڕاپۆرتەکان لەسەر ئەم ئامێرە دەمێننەوە',
+    locTitle:'شوێنەکەت دیار نییە 📍',
+    locIntro:'ڕێگەت بە ماڵپەڕەکە نەداوە شوێنەکەت بزانێت. بۆ چالاککردنی ئەم هەنگاوانە بگرە:',
+    locHttps:'تێبینی: شوێن تەنها لە ماڵپەڕی HTTPS دا کار دەکات، نەک لە فایلێکی ناوخۆیی لەسەر مۆبایل.',
+    locA:'ئەندرۆید (Chrome)',
+    locAs:['GPS ی مۆبایلەکەت بکەرەوە (Location لە لیستی سەرەوەی شاشە).','لە لای ناونیشانی ماڵپەڕ دوگمەی 🔒 یان ⚙️ دابگرە.','«Permissions / ڕێگەپێدانەکان» ← «Location / شوێن» ← «Allow / ڕێگەپێدان».','پەڕەکە نوێ بکەرەوە (Refresh).'],
+    locI:'ئایفۆن (Safari)',
+    locIs:['بڕۆ بۆ Settings ← Privacy & Security ← Location Services و بیکە On.','لە هەمان شوێن Safari (یان Chrome) هەڵبژێرە ← «While Using the App».','لە Safari دوگمەی «aA» دابگرە ← Website Settings ← Location ← Allow.','پەڕەکە نوێ بکەرەوە.'],
+    locD:'کۆمپیوتەر (Chrome / Edge)',
+    locDs:['لە لای ناونیشانی ماڵپەڕ ئایکۆنی 🔒 دابگرە.','«Location» بکە بە «Allow».','پەڕەکە نوێ بکەرەوە (F5).'],
     police:'پۆلیس', accident:'ڕووداو', traffic:'قەرەباڵغی', hazard:'مەترسی', closed:'ڕێگا داخراوە',
     checkpoint:'خاڵی پشکنین', camera:'کامێرا', pothole:'چاڵ لە ڕێگا', weather:'کەشوهەوای خراپ'
   },
@@ -855,6 +875,17 @@ const T = {
     confirms:'confirmed', ahead:'ahead', offline:'Saved on this device only (Supabase not set)',
     arrived:'You have arrived', noVoice:'No Kurdish voice found, using English voice', dest:'Destination', routeTo:'Route',
     fast:'Fastest', alt:'Alternative', arriveAt:'Arrive',
+    retry:'Try again', close:'Close', locUnavail:'GPS unavailable. Make sure Location is turned on in your phone',
+    dbErr:'Could not reach the server, reports will stay on this device',
+    locTitle:'Your location is off 📍',
+    locIntro:'You have not allowed this site to see your location. To turn it on:',
+    locHttps:'Note: location only works on an HTTPS website, not on a local file opened on a phone.',
+    locA:'Android (Chrome)',
+    locAs:['Turn on your phone GPS (Location in the top quick settings).','Tap the 🔒 or ⚙️ icon next to the website address.','Permissions → Location → Allow.','Refresh the page.'],
+    locI:'iPhone (Safari)',
+    locIs:['Go to Settings → Privacy & Security → Location Services and turn it On.','In the same list pick Safari (or Chrome) → While Using the App.','In Safari tap the “aA” button → Website Settings → Location → Allow.','Refresh the page.'],
+    locD:'Computer (Chrome / Edge)',
+    locDs:['Click the 🔒 icon at the left of the address bar.','Set Location to Allow.','Refresh the page (F5).'],
     police:'Police', accident:'Accident', traffic:'Traffic jam', hazard:'Hazard', closed:'Road closed',
     checkpoint:'Checkpoint', camera:'Camera', pothole:'Pothole', weather:'Bad weather'
   }
@@ -865,6 +896,7 @@ const RTYPES = {
 };
 const REPORT_TTL_MS = 3*60*60*1000;   // reports vanish after 3 hours
 const IRAQ_BOUNDS = [[28.9,38.7],[37.5,49.0]];
+const IRAQ_PAD = [[28.4,38.2],[38.0,49.5]];
 
 /* ==PURE-START== */
 const R_EARTH = 6371000;
@@ -924,35 +956,38 @@ function reportAlive(r,now){ return (now-new Date(r.created_at).getTime())<REPOR
 /* ==PURE-END== */
 
 /* ============ STATE ============ */
+const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 const $ = s=>document.querySelector(s);
-let lang = localStorage.getItem('rebar_lang') || 'ku';
-let dark = localStorage.getItem('rebar_dark')==='1';
+let lang = store.get('shwenkar_lang') || 'ku';
+let dark = store.get('shwenkar_dark')==='1';
 let muted = false;
 const tr = ()=>T[lang];
 const isKu = ()=>lang==='ku';
 const N = x=> isKu()? toKuDigits(x):String(x);
 
-const map = L.map('map',{zoomControl:false,attributionControl:true,maxBounds:[[24,34],[40,52]],minZoom:5})
+const map = L.map('map',{zoomControl:false,attributionControl:true,maxBounds:IRAQ_PAD,maxBoundsViscosity:1,
+  minZoom:6,maxZoom:18,fadeAnimation:false,markerZoomAnimation:false,preferCanvas:true})
   .fitBounds(IRAQ_BOUNDS);
-/* Tile providers: no API key, work when the page is opened from a local file.
-   If one starts failing, the app automatically moves to the next one. */
+/* Map tiles: standard OpenStreetMap look, only ever requested inside Iraq.
+   OpenStreetMap's own server refuses pages opened from a local file, so in that case we
+   start with a mirror. If a provider keeps failing the app moves to the next one. */
+const IS_LOCAL = location.protocol==='file:' || !/^https?:$/.test(location.protocol);
+const OSM  = {url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',nz:18,attr:'© OpenStreetMap contributors'};
+const OSMDE= {url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png',nz:18,attr:'© OpenStreetMap contributors'};
+const ESRI = {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',nz:18,attr:'Tiles © Esri'};
+const ESRID= {url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',nz:16,attr:'Tiles © Esri'};
 const TILESETS={
-  light:[
-    {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',nz:19,attr:'Tiles © Esri'},
-    {url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png',nz:18,attr:'© OpenStreetMap contributors'}
-  ],
-  dark:[
-    {url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',nz:16,attr:'Tiles © Esri'},
-    {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',nz:19,attr:'Tiles © Esri'}
-  ]
+  light: IS_LOCAL ? [OSMDE,ESRI,OSM] : [OSM,OSMDE,ESRI],
+  dark:  [ESRID,ESRI]
 };
 let tileIdx={light:0,dark:0}, tileErrs=0, tiles=null;
 function setTiles(){
   const mode=dark?'dark':'light', p=TILESETS[mode][tileIdx[mode]]; tileErrs=0;
   if(tiles) tiles.remove();
-  tiles=L.tileLayer(p.url,{maxZoom:19,maxNativeZoom:p.nz,attribution:p.attr}).addTo(map);
+  tiles=L.tileLayer(p.url,{maxZoom:18,maxNativeZoom:p.nz,attribution:p.attr,bounds:IRAQ_PAD,
+    updateWhenIdle:true,updateWhenZooming:false,keepBuffer:1,crossOrigin:false}).addTo(map);
   tiles.on('tileerror',()=>{
-    if(++tileErrs===8 && tileIdx[mode]<TILESETS[mode].length-1){ tileIdx[mode]++; setTiles(); }
+    if(++tileErrs===6 && tileIdx[mode]<TILESETS[mode].length-1){ tileIdx[mode]++; setTiles(); }
   });
 }
 
@@ -969,10 +1004,11 @@ function applyLang(){
   document.documentElement.lang = isKu()?'ckb':'en';
   document.documentElement.dir = isKu()?'rtl':'ltr';
   $('#btnLang').textContent = isKu()?'EN':'کو';
-  document.title = isKu()?'ڕێبەر · Rebar':'Rebar · ڕێبەر';
+  document.title = isKu()?'شوێنکار · Shwenkar':'Shwenkar · شوێنکار';
   document.querySelectorAll('[data-t]').forEach(e=>e.textContent=tr()[e.dataset.t]);
   document.querySelectorAll('[data-ph]').forEach(e=>e.placeholder=tr()[e.dataset.ph]);
   buildGrid(); renderReports(); renderRouteInfo();
+  if($('#locHelp').style.display==='flex') buildLocHelp();
   if(navigating) updateNav(true);
 }
 function applyTheme(){
@@ -981,8 +1017,8 @@ function applyTheme(){
   $('#btnTheme').textContent = dark?'☀️':'🌙';
   document.querySelector('meta[name=theme-color]').content = dark?'#121a2b':'#0b6cff';
 }
-$('#btnLang').onclick=()=>{ lang=isKu()?'en':'ku'; localStorage.setItem('rebar_lang',lang); applyLang(); };
-$('#btnTheme').onclick=()=>{ dark=!dark; localStorage.setItem('rebar_dark',dark?'1':'0'); applyTheme(); };
+$('#btnLang').onclick=()=>{ lang=isKu()?'en':'ku'; store.set('shwenkar_lang',lang); applyLang(); };
+$('#btnTheme').onclick=()=>{ dark=!dark; store.set('shwenkar_dark',dark?'1':'0'); applyTheme(); };
 
 let toastT;
 function toast(msg,ms=2800){ const e=$('#toast'); e.textContent=msg; e.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>e.style.display='none',ms); }
@@ -1028,9 +1064,49 @@ function onPos(p){
   if(navigating){ if(follow) map.setView(ll,Math.max(map.getZoom(),17),{animate:true}); updateNav(); }
   checkNearbyReports();
 }
-function onPosErr(e){ if(e.code===1) toast(tr().locDenied); }
-if('geolocation' in navigator) navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
-$('#btnLoc').onclick=()=>{ if(userPos){ follow=true; map.setView(userPos,Math.max(map.getZoom(),16)); } else toast(tr().locWait); };
+function onPosErr(e){
+  if(e.code===1) showLocHelp();
+  else if(e.code===2) toast(tr().locUnavail,4500);
+}
+function buildLocHelp(){
+  const ua=navigator.userAgent, me=/android/i.test(ua)?'A':/iphone|ipad|ipod/i.test(ua)?'I':'D';
+  const box=$('#locSteps'); box.innerHTML='';
+  ['A','I','D'].sort((x,y)=>x===me?-1:y===me?1:0).forEach(k=>{
+    const d=document.createElement('details'); if(k===me) d.open=true;
+    const sm=document.createElement('summary'); sm.textContent=tr()['loc'+k]; d.appendChild(sm);
+    const ol=document.createElement('ol'); tr()['loc'+k+'s'].forEach(t=>{ const li=document.createElement('li'); li.textContent=t; ol.appendChild(li); });
+    d.appendChild(ol); box.appendChild(d);
+  });
+}
+function showLocHelp(){ buildLocHelp(); $('#locHelp').style.display='flex'; }
+function hideLocHelp(){ $('#locHelp').style.display='none'; }
+$('#btnLocClose').onclick=hideLocHelp;
+$('#locHelp').onclick=e=>{ if(e.target.id==='locHelp') hideLocHelp(); };
+$('#btnLocRetry').onclick=()=>{
+  if(!('geolocation' in navigator)) return;
+  navigator.geolocation.getCurrentPosition(p=>{ hideLocHelp(); startWatch(); onPos(p); },
+    e=>{ if(e.code!==1) toast(tr().locUnavail,4500); else toast(tr().locDenied,3000); },{enableHighAccuracy:true,timeout:15000});
+};
+let watchId=null;
+function startWatch(){
+  if(!('geolocation' in navigator)) return;
+  if(watchId!=null) navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+}
+startWatch();
+if(navigator.permissions&&navigator.permissions.query){
+  navigator.permissions.query({name:'geolocation'}).then(st=>{
+    if(st.state==='denied') showLocHelp();
+    st.onchange=()=>{ if(st.state==='granted'){ hideLocHelp(); startWatch(); } else if(st.state==='denied') showLocHelp(); };
+  }).catch(()=>{});
+}
+$('#btnLoc').onclick=()=>{
+  if(userPos){ follow=true; map.setView(userPos,Math.max(map.getZoom(),16)); return; }
+  const done=()=>toast(tr().locWait);
+  if(navigator.permissions&&navigator.permissions.query)
+    navigator.permissions.query({name:'geolocation'}).then(st=>{ st.state==='denied'?showLocHelp():done(); }).catch(done);
+  else done();
+};
 map.on('dragstart',()=>{ follow=false; });
 
 /* ============ SEARCH ============ */
@@ -1183,20 +1259,34 @@ async function updateNav(force){
 }
 
 /* ============ REPORTS (Supabase or local) ============ */
-let sb=null;
-try{ if(SUPABASE_URL&&SUPABASE_KEY&&window.supabase) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
-const LS_KEY='rebar_reports';
-function lsLoad(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
-function lsSave(a){ localStorage.setItem(LS_KEY,JSON.stringify(a)); }
+let sb=null, dbWarned=false;
+function loadSupabase(){
+  if(!SUPABASE_URL||!SUPABASE_KEY) return Promise.resolve(false);
+  return new Promise(res=>{
+    const sc=document.createElement('script');
+    sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    sc.onload=()=>{ try{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); res(true); }catch(e){ res(false); } };
+    sc.onerror=()=>res(false);
+    document.head.appendChild(sc);
+  });
+}
+function dbFail(){ if(!dbWarned){ dbWarned=true; toast(tr().dbErr,6000); } }
+const LS_KEY='shwenkar_reports';
+function lsLoad(){ try{ return JSON.parse(store.get(LS_KEY)||'[]'); }catch(e){ return []; } }
+function lsSave(a){ store.set(LS_KEY,JSON.stringify(a)); }
 
 async function loadReports(){
   const now=Date.now();
+  let ok=false;
   if(sb){
-    const since=new Date(now-REPORT_TTL_MS).toISOString();
-    const {data,error}=await sb.from('reports').select('*').gte('created_at',since).limit(800);
-    if(!error&&data) reports=data;
-  } else reports=lsLoad().filter(r=>reportAlive(r,now));
-  if(!sb) lsSave(reports);
+    try{
+      const since=new Date(now-REPORT_TTL_MS).toISOString();
+      const {data,error}=await sb.from('reports').select('*').gte('created_at',since).limit(500);
+      if(error) throw error;
+      reports=data||[]; ok=true;
+    }catch(e){ dbFail(); }
+  }
+  if(!ok){ reports=lsLoad().filter(r=>reportAlive(r,now)); lsSave(reports); }
   renderReports();
 }
 function renderReports(){
@@ -1222,22 +1312,23 @@ function renderReports(){
 async function addReport(type){
   const ll=userPos||[map.getCenter().lat,map.getCenter().lng];
   const rec={type,lat:+ll[0].toFixed(6),lng:+ll[1].toFixed(6),confirms:0,denies:0,created_at:new Date().toISOString()};
+  let saved=false;
   if(sb){
     const {data,error}=await sb.from('reports').insert({type:rec.type,lat:rec.lat,lng:rec.lng}).select().single();
-    if(error){ toast(error.message); return; }
-    reports.push(data);
-  } else {
+    if(error) dbFail(); else { reports.push(data); saved=true; }
+  }
+  if(!saved){
     rec.id='l'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-    reports.push(rec); lsSave(reports);
-    toast(tr().offline,3500);
+    reports.push(rec); lsSave(reports.filter(x=>String(x.id).startsWith('l')));
+    if(!sb) toast(tr().offline,3500);
   }
   renderReports();
 }
 async function vote(id,v){
   const r=reports.find(x=>x.id===id); if(!r) return;
   if(v==='c') r.confirms=(r.confirms||0)+1; else r.denies=(r.denies||0)+1;
-  if(sb) await sb.from('reports').update({confirms:r.confirms,denies:r.denies}).eq('id',id);
-  else lsSave(reports);
+  if(sb && !String(id).startsWith('l')){ const {error}=await sb.rpc('vote_report',{rid:id,is_confirm:v==='c'}); if(error) dbFail(); }
+  else lsSave(reports.filter(x=>String(x.id).startsWith('l')));
   renderReports();
 }
 function buildGrid(){
@@ -1247,8 +1338,8 @@ function buildGrid(){
     b.children[0].textContent=RTYPES[k]; b.children[1].textContent=tr()[k];
     b.onclick=()=>{
       const now=Date.now();
-      if(now-(+localStorage.getItem('rebar_lastrep')||0)<20000){ toast(tr().wait); return; }
-      localStorage.setItem('rebar_lastrep',String(now));
+      if(now-(+store.get('shwenkar_lastrep')||0)<20000){ toast(tr().wait); return; }
+      store.set('shwenkar_lastrep',String(now));
       $('#modal').style.display='none'; addReport(k); toast(tr().reported);
     };
     g.appendChild(b);
@@ -1277,10 +1368,13 @@ function checkNearbyReports(){
 }
 
 /* ============ INIT ============ */
-if(sb){
+loadReports();
+loadSupabase().then(ok=>{
+  if(!ok) return;
   loadReports();
-  sb.channel('reports-live').on('postgres_changes',{event:'*',schema:'public',table:'reports'},()=>loadReports()).subscribe();
-} else loadReports();
+  let t; const again=()=>{ clearTimeout(t); t=setTimeout(loadReports,1500); };
+  try{ sb.channel('reports-live').on('postgres_changes',{event:'*',schema:'public',table:'reports'},again).subscribe(); }catch(e){}
+});
 setInterval(()=>{ sb?loadReports():renderReports(); },60000);
 applyTheme(); applyLang();
 </script>
