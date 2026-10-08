@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b6cff">
+<title>ڕێبەر · Rebar</title>
+<style>
+/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: url(images/layers.png);
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: url(images/marker-icon.png);
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --fg:#14213d; --muted:#6b7a90; --card:#ffffffee; --line:#e3e8ef;
+  --brand:#0b6cff; --brand2:#00c2a8; --danger:#e5484d; --warn:#f5a524;
+  --shadow:0 6px 24px rgba(15,30,60,.18);
+}
+body.dark{ --bg:#121a2b; --fg:#eaf0ff; --muted:#93a3bd; --card:#162036ee; --line:#26324d; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:'Vazirmatn',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;touch-action:manipulation}
+button,input{font-family:inherit;font-size:16px;color:inherit}
+#map{position:absolute;inset:0;z-index:0}
+.leaflet-control-attribution{font-size:10px!important}
+.leaflet-control-zoom{display:none}
+
+/* top search */
+#top{position:absolute;z-index:1000;top:calc(10px + env(safe-area-inset-top));inset-inline:10px}
+.bar{display:flex;gap:8px;align-items:center;background:var(--card);backdrop-filter:blur(10px);
+  border-radius:16px;box-shadow:var(--shadow);padding:6px 8px}
+.bar input{flex:1;min-width:0;border:0;background:transparent;outline:0;padding:10px 6px}
+.bar input::placeholder{color:var(--muted)}
+.ib{width:42px;height:42px;border-radius:12px;border:0;background:transparent;cursor:pointer;
+  display:grid;place-items:center;font-size:20px;flex:none}
+.ib:active{background:var(--line)}
+#results{margin-top:8px;background:var(--card);backdrop-filter:blur(10px);border-radius:16px;
+  box-shadow:var(--shadow);max-height:45vh;overflow:auto;display:none}
+#results div{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+#results div:last-child{border:0}
+#results div small{display:block;color:var(--muted);margin-top:2px}
+#results .none{color:var(--muted);cursor:default}
+
+/* nav banner */
+#navbar{position:absolute;z-index:1001;top:calc(10px + env(safe-area-inset-top));inset-inline:10px;display:none;
+  background:var(--brand);color:#fff;border-radius:18px;box-shadow:var(--shadow);padding:12px 16px;
+  align-items:center;gap:14px}
+#navbar .ico{font-size:38px;line-height:1;width:48px;text-align:center;flex:none}
+#navbar .txt{flex:1;min-width:0}
+#navbar .dist{font-size:26px;font-weight:800}
+#navbar .ins{font-size:16px;opacity:.95;overflow:hidden;text-overflow:ellipsis}
+
+/* FABs */
+#fabs{position:absolute;z-index:1000;inset-inline-end:10px;bottom:calc(150px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:10px}
+.fab{width:52px;height:52px;border-radius:50%;border:0;background:var(--card);box-shadow:var(--shadow);
+  font-size:22px;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(10px)}
+.fab.main{background:var(--danger);color:#fff}
+.fab.on{background:var(--brand);color:#fff}
+
+/* bottom sheet */
+#sheet{position:absolute;z-index:1000;inset-inline:0;bottom:0;background:var(--card);backdrop-filter:blur(12px);
+  border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(15,30,60,.18);
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom));display:none}
+#sheet .row{display:flex;align-items:center;gap:12px}
+#sheet .eta{flex:1}
+#sheet .eta b{font-size:24px;color:var(--brand2)}
+#sheet .eta span{color:var(--muted);font-size:14px;display:block}
+.btn{border:0;border-radius:14px;padding:12px 18px;font-weight:600;cursor:pointer;background:var(--brand);color:#fff}
+.btn.red{background:var(--danger)} .btn.ghost{background:var(--line);color:var(--fg)}
+#alts{display:flex;gap:8px;margin-top:10px;overflow:auto}
+#alts button{flex:none;border:2px solid var(--line);background:transparent;border-radius:12px;padding:6px 12px;cursor:pointer}
+#alts button.sel{border-color:var(--brand);color:var(--brand);font-weight:600}
+#steps{margin-top:10px;max-height:34vh;overflow:auto;display:none}
+#steps div{display:flex;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}
+#steps div i{font-style:normal;width:26px;text-align:center;font-size:20px;flex:none}
+#steps div span{flex:1} #steps div em{font-style:normal;color:var(--muted);font-size:12px}
+
+/* report modal */
+#modal{position:absolute;inset:0;z-index:2000;background:rgba(10,20,40,.5);display:none;align-items:flex-end}
+#modal .box{width:100%;background:var(--bg);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+#modal h3{margin:0 0 12px;text-align:center}
+#grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+#grid button{border:0;background:var(--line);border-radius:16px;padding:14px 4px;cursor:pointer;display:flex;
+  flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600}
+#grid button i{font-style:normal;font-size:30px}
+#modal .btn{width:100%;margin-top:12px}
+
+/* markers */
+.rm{width:36px;height:36px;border-radius:50%;background:#fff;border:3px solid var(--danger);display:grid;place-items:center;
+  font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.me{width:44px;height:44px;position:relative}
+.me .dot{position:absolute;inset:12px;border-radius:50%;background:var(--brand);border:3px solid #fff;box-shadow:0 0 0 2px rgba(11,108,255,.35)}
+.me .arr{position:absolute;inset:0;transition:transform .3s;display:grid;place-items:start center}
+.me .arr::before{content:"";width:0;height:0;border-inline:8px solid transparent;border-bottom:14px solid var(--brand);margin-top:-2px}
+.pop{text-align:center;font-family:inherit;min-width:150px}
+.pop b{display:block;font-size:15px;margin-bottom:2px}
+.pop small{color:#667;display:block;margin-bottom:8px}
+.pop button{border:0;border-radius:10px;padding:7px 10px;margin:2px;cursor:pointer;font-family:inherit;font-size:13px;background:#e8eef9}
+.pop button.ok{background:#d9f6ee}
+.leaflet-popup-content{margin:12px 14px}
+#toast{position:absolute;z-index:3000;left:50%;transform:translateX(-50%);top:calc(80px + env(safe-area-inset-top));
+  background:#14213d;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;display:none;max-width:88%;text-align:center}
+#warn{position:absolute;z-index:1500;inset-inline:10px;top:calc(76px + env(safe-area-inset-top));background:var(--warn);color:#201500;
+  padding:10px 14px;border-radius:14px;font-weight:600;box-shadow:var(--shadow);display:none;align-items:center;gap:10px}
+#warn i{font-style:normal;font-size:24px}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="top">
+  <div class="bar">
+    <button class="ib" id="btnLang" aria-label="language">EN</button>
+    <input id="q" type="search" autocomplete="off" data-ph="search">
+    <button class="ib" id="btnGo" aria-label="search">🔍</button>
+    <button class="ib" id="btnTheme" aria-label="theme">🌙</button>
+  </div>
+  <div id="results"></div>
+</div>
+
+<div id="navbar">
+  <div class="ico" id="nIco">↑</div>
+  <div class="txt"><div class="dist" id="nDist"></div><div class="ins" id="nIns"></div></div>
+  <button class="ib" id="btnMute" style="color:#fff" aria-label="voice">🔊</button>
+</div>
+
+<div id="warn"><i id="wIco"></i><span id="wTxt"></span></div>
+
+<div id="fabs">
+  <button class="fab" id="btnLoc" aria-label="locate">📍</button>
+  <button class="fab main" id="btnRep" aria-label="report">⚠️</button>
+</div>
+
+<div id="sheet">
+  <div class="row">
+    <div class="eta"><b id="sEta"></b><span id="sSub"></span></div>
+    <button class="btn ghost" id="btnSteps" data-t="steps"></button>
+    <button class="btn" id="btnStart" data-t="start"></button>
+    <button class="btn red" id="btnStop" data-t="stop" style="display:none"></button>
+  </div>
+  <div id="alts"></div>
+  <div id="steps"></div>
+</div>
+
+<div id="modal">
+  <div class="box">
+    <h3 data-t="whatSee"></h3>
+    <div id="grid"></div>
+    <button class="btn ghost" id="btnCancel" data-t="cancel"></button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   CONFIG — put your Supabase values here to share reports between
+   all users. Leave empty and reports are saved on this device only.
+   (Run setup.sql once in the Supabase SQL editor.)
+   ============================================================ */
+const SUPABASE_URL = '';
+const SUPABASE_KEY = '';
+
+/* ============ TEXT (Kurdish Sorani main / English) ============ */
+const T = {
+  ku:{
+    search:'گەڕان بۆ شوێن لە عێراق...', steps:'هەنگاوەکان', start:'دەستپێبکە', stop:'وەستاندن',
+    whatSee:'چیت بینی؟', cancel:'پاشگەزبوونەوە', km:'کم', m:'م', min:'خولەک', h:'کاتژمێر',
+    arrive:'گەیشتیت', depart:'دەستپێبکە', cont:'بەردەوام بە', uturn:'بسوڕێوە بۆ دواوە',
+    left:'بسوڕێوە بۆ چەپ', right:'بسوڕێوە بۆ ڕاست', slL:'کەمێک بۆ چەپ', slR:'کەمێک بۆ ڕاست',
+    shL:'بە توندی بۆ چەپ', shR:'بە توندی بۆ ڕاست', straight:'ڕاستەوە بڕۆ',
+    round:'بچۆ ناو سووڕەوە و دەرچوونی {n} بگرە', onto:'بۆ', on:'لە',
+    noRes:'هیچ ئەنجامێک نەدۆزرایەوە', locWait:'چاوەڕێی شوێنی GPS بە...', locDenied:'ڕێگە بە شوێن نەدرا',
+    rerouting:'ڕێڕەو دووبارە دەکرێتەوە...', routeErr:'ڕێڕەو نەدۆزرایەوە. پەیوەندی ئینتەرنێت بپشکنە.',
+    reported:'سوپاس! ڕاپۆرتەکە زیادکرا', wait:'تکایە کەمێک چاوەڕێ بکە', stillThere:'هێشتا هەیە', gone:'نەماوە',
+    confirms:'پشتڕاستکرایەوە', ahead:'لە پێشەوەیە', offline:'تەنها لەسەر ئەم ئامێرە (Supabase دانەنراوە)',
+    arrived:'گەیشتیت بە مەبەست', noVoice:'دەنگی کوردی نییە، دەنگی ئینگلیزی بەکاردێت', dest:'مەبەست', routeTo:'ڕێڕەو',
+    fast:'خێراترین', alt:'ڕێگای تر', arriveAt:'گەیشتن',
+    police:'پۆلیس', accident:'ڕووداو', traffic:'قەرەباڵغی', hazard:'مەترسی', closed:'ڕێگا داخراوە',
+    checkpoint:'خاڵی پشکنین', camera:'کامێرا', pothole:'چاڵ لە ڕێگا', weather:'کەشوهەوای خراپ'
+  },
+  en:{
+    search:'Search a place in Iraq...', steps:'Steps', start:'Start', stop:'Stop',
+    whatSee:'What did you see?', cancel:'Cancel', km:'km', m:'m', min:'min', h:'h',
+    arrive:'You have arrived', depart:'Head out', cont:'Continue', uturn:'Make a U-turn',
+    left:'Turn left', right:'Turn right', slL:'Bear left', slR:'Bear right',
+    shL:'Sharp left', shR:'Sharp right', straight:'Go straight',
+    round:'Enter the roundabout and take exit {n}', onto:'onto', on:'on',
+    noRes:'No results found', locWait:'Waiting for GPS...', locDenied:'Location permission denied',
+    rerouting:'Rerouting...', routeErr:'Could not find a route. Check your connection.',
+    reported:'Thanks! Report added', wait:'Please wait a moment', stillThere:'Still there', gone:'Gone',
+    confirms:'confirmed', ahead:'ahead', offline:'Saved on this device only (Supabase not set)',
+    arrived:'You have arrived', noVoice:'No Kurdish voice found, using English voice', dest:'Destination', routeTo:'Route',
+    fast:'Fastest', alt:'Alternative', arriveAt:'Arrive',
+    police:'Police', accident:'Accident', traffic:'Traffic jam', hazard:'Hazard', closed:'Road closed',
+    checkpoint:'Checkpoint', camera:'Camera', pothole:'Pothole', weather:'Bad weather'
+  }
+};
+const RTYPES = {
+  police:'👮', accident:'💥', traffic:'🚗', hazard:'⚠️', closed:'⛔',
+  checkpoint:'🛑', camera:'📷', pothole:'🕳️', weather:'🌧️'
+};
+const REPORT_TTL_MS = 3*60*60*1000;   // reports vanish after 3 hours
+const IRAQ_BOUNDS = [[28.9,38.7],[37.5,49.0]];
+
+/* ==PURE-START== */
+const R_EARTH = 6371000;
+function haversine(a,b){
+  const rad=Math.PI/180, dLat=(b[0]-a[0])*rad, dLon=(b[1]-a[1])*rad;
+  const s=Math.sin(dLat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dLon/2)**2;
+  return 2*R_EARTH*Math.asin(Math.sqrt(s));
+}
+function distToSeg(p,a,b){ // p,a,b = [lat,lon]; returns metres
+  const k=Math.cos(p[0]*Math.PI/180)*111320, ky=110540;
+  const ax=(a[1]-p[1])*k, ay=(a[0]-p[0])*ky, bx=(b[1]-p[1])*k, by=(b[0]-p[0])*ky;
+  const dx=bx-ax, dy=by-ay, len=dx*dx+dy*dy;
+  let t = len? Math.max(0,Math.min(1,(-ax*dx-ay*dy)/len)) : 0;
+  return Math.hypot(ax+t*dx, ay+t*dy);
+}
+function distToLine(p,line){
+  let best=Infinity;
+  for(let i=0;i<line.length-1;i++){ const d=distToSeg(p,line[i],line[i+1]); if(d<best) best=d; }
+  return best;
+}
+function bearing(a,b){
+  const rad=Math.PI/180, y=Math.sin((b[1]-a[1])*rad)*Math.cos(b[0]*rad);
+  const x=Math.cos(a[0]*rad)*Math.sin(b[0]*rad)-Math.sin(a[0]*rad)*Math.cos(b[0]*rad)*Math.cos((b[1]-a[1])*rad);
+  return (Math.atan2(y,x)/rad+360)%360;
+}
+function toKuDigits(s){ return String(s).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]).replace('.','٫'); }
+function fmtDist(m,tr,ku){
+  let s;
+  if(m<1000) s=(m<100?Math.round(m/5)*5:Math.round(m/10)*10)+' '+tr.m;
+  else s=(m/1000).toFixed(m<10000?1:0)+' '+tr.km;
+  return ku?toKuDigits(s):s;
+}
+function fmtTime(sec,tr,ku){
+  const mins=Math.max(1,Math.round(sec/60)); let s;
+  if(mins<60) s=mins+' '+tr.min;
+  else { const h=Math.floor(mins/60), r=mins%60; s=h+' '+tr.h+(r?' '+r+' '+tr.min:''); }
+  return ku?toKuDigits(s):s;
+}
+function maneuverIcon(step){
+  const t=step.maneuver.type, m=step.maneuver.modifier||'';
+  if(t==='arrive') return '🏁';
+  if(t==='depart') return '🚗';
+  if(t==='roundabout'||t==='rotary') return '⟳';
+  return ({'left':'←','right':'→','slight left':'↖','slight right':'↗','sharp left':'↙','sharp right':'↘','uturn':'↶','straight':'↑'})[m]||'↑';
+}
+function instruction(step,tr){
+  const mv=step.maneuver, t=mv.type, m=mv.modifier||'', name=step.name||'';
+  const onto = name ? ' '+tr.onto+' '+name : '';
+  if(t==='arrive') return tr.arrive;
+  if(t==='depart') return tr.depart+(name?' '+tr.on+' '+name:'');
+  if(t==='roundabout'||t==='rotary') return tr.round.replace('{n}', mv.exit||'')+onto;
+  const dir = ({'left':tr.left,'right':tr.right,'slight left':tr.slL,'slight right':tr.slR,
+    'sharp left':tr.shL,'sharp right':tr.shR,'uturn':tr.uturn,'straight':tr.straight})[m] || tr.cont;
+  return dir+onto;
+}
+function reportAlive(r,now){ return (now-new Date(r.created_at).getTime())<REPORT_TTL_MS && (r.denies||0)<3; }
+/* ==PURE-END== */
+
+/* ============ STATE ============ */
+const $ = s=>document.querySelector(s);
+let lang = localStorage.getItem('rebar_lang') || 'ku';
+let dark = localStorage.getItem('rebar_dark')==='1';
+let muted = false;
+const tr = ()=>T[lang];
+const isKu = ()=>lang==='ku';
+const N = x=> isKu()? toKuDigits(x):String(x);
+
+const map = L.map('map',{zoomControl:false,attributionControl:true,maxBounds:[[24,34],[40,52]],minZoom:5})
+  .fitBounds(IRAQ_BOUNDS);
+/* Tile providers: no API key, work when the page is opened from a local file.
+   If one starts failing, the app automatically moves to the next one. */
+const TILESETS={
+  light:[
+    {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',nz:19,attr:'Tiles © Esri'},
+    {url:'https://tile.openstreetmap.de/{z}/{x}/{y}.png',nz:18,attr:'© OpenStreetMap contributors'}
+  ],
+  dark:[
+    {url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',nz:16,attr:'Tiles © Esri'},
+    {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',nz:19,attr:'Tiles © Esri'}
+  ]
+};
+let tileIdx={light:0,dark:0}, tileErrs=0, tiles=null;
+function setTiles(){
+  const mode=dark?'dark':'light', p=TILESETS[mode][tileIdx[mode]]; tileErrs=0;
+  if(tiles) tiles.remove();
+  tiles=L.tileLayer(p.url,{maxZoom:19,maxNativeZoom:p.nz,attribution:p.attr}).addTo(map);
+  tiles.on('tileerror',()=>{
+    if(++tileErrs===8 && tileIdx[mode]<TILESETS[mode].length-1){ tileIdx[mode]++; setTiles(); }
+  });
+}
+
+let userPos=null, userHeading=0, lastPos=null, firstFix=true, follow=false;
+let meMarker=null, accCircle=null, destMarker=null;
+let routes=[], selRoute=0, routeLayers=[];
+let navigating=false, stepIdx=0, ann={}, offCount=0, lastReroute=0, wakeLock=null, alerted=new Set();
+let dest=null;
+const reportMarkers = new Map();
+let reports = [];
+
+/* ============ i18n / theme ============ */
+function applyLang(){
+  document.documentElement.lang = isKu()?'ckb':'en';
+  document.documentElement.dir = isKu()?'rtl':'ltr';
+  $('#btnLang').textContent = isKu()?'EN':'کو';
+  document.title = isKu()?'ڕێبەر · Rebar':'Rebar · ڕێبەر';
+  document.querySelectorAll('[data-t]').forEach(e=>e.textContent=tr()[e.dataset.t]);
+  document.querySelectorAll('[data-ph]').forEach(e=>e.placeholder=tr()[e.dataset.ph]);
+  buildGrid(); renderReports(); renderRouteInfo();
+  if(navigating) updateNav(true);
+}
+function applyTheme(){
+  document.body.classList.toggle('dark',dark);
+  setTiles();
+  $('#btnTheme').textContent = dark?'☀️':'🌙';
+  document.querySelector('meta[name=theme-color]').content = dark?'#121a2b':'#0b6cff';
+}
+$('#btnLang').onclick=()=>{ lang=isKu()?'en':'ku'; localStorage.setItem('rebar_lang',lang); applyLang(); };
+$('#btnTheme').onclick=()=>{ dark=!dark; localStorage.setItem('rebar_dark',dark?'1':'0'); applyTheme(); };
+
+let toastT;
+function toast(msg,ms=2800){ const e=$('#toast'); e.textContent=msg; e.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>e.style.display='none',ms); }
+
+/* ============ VOICE ============ */
+let voiceNoticeShown=false;
+function pickVoice(){
+  const vs=speechSynthesis.getVoices();
+  const ku=vs.find(v=>/^(ckb|ku)/i.test(v.lang));
+  if(ku) return {v:ku,l:'ku'};
+  return {v:vs.find(v=>/^en/i.test(v.lang))||null,l:'en'};
+}
+function speak(step,textOverride){
+  if(muted||!('speechSynthesis' in window)) return;
+  const {v,l}=pickVoice();
+  if(l==='en' && isKu() && !voiceNoticeShown){ voiceNoticeShown=true; toast(tr().noVoice,3500); }
+  const text = textOverride || instruction(step,T[l]);
+  const u=new SpeechSynthesisUtterance(text);
+  if(v){u.voice=v;u.lang=v.lang;} else u.lang= l==='ku'?'ckb':'en-US';
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+function speakDist(step,m){
+  const {l}=pickVoice(); const t=T[l];
+  speak(step, (m<1000?Math.round(m/10)*10+' '+t.m:(m/1000).toFixed(1)+' '+t.km)+', '+instruction(step,t));
+}
+$('#btnMute').onclick=()=>{ muted=!muted; $('#btnMute').textContent=muted?'🔇':'🔊'; if(muted) speechSynthesis.cancel(); };
+if('speechSynthesis' in window) speechSynthesis.onvoiceschanged=()=>{};
+
+/* ============ LOCATION ============ */
+function meIcon(){ return L.divIcon({className:'',iconSize:[44,44],iconAnchor:[22,22],
+  html:'<div class="me"><div class="arr" id="meArr"></div><div class="dot"></div></div>'}); }
+function onPos(p){
+  const c=p.coords, ll=[c.latitude,c.longitude];
+  if(c.heading!=null && !isNaN(c.heading) && (c.speed||0)>1) userHeading=c.heading;
+  else if(lastPos && haversine(lastPos,ll)>8){ userHeading=bearing(lastPos,ll); }
+  if(!lastPos || haversine(lastPos,ll)>8) lastPos=ll;
+  userPos=ll;
+  if(!meMarker){ meMarker=L.marker(ll,{icon:meIcon(),zIndexOffset:1000,interactive:false}).addTo(map);
+    accCircle=L.circle(ll,{radius:c.accuracy,weight:0,fillColor:'#0b6cff',fillOpacity:.1,interactive:false}).addTo(map); }
+  meMarker.setLatLng(ll); accCircle.setLatLng(ll).setRadius(c.accuracy||20);
+  const arr=document.getElementById('meArr'); if(arr) arr.style.transform='rotate('+userHeading+'deg)';
+  if(firstFix){ firstFix=false; map.setView(ll,15); }
+  if(navigating){ if(follow) map.setView(ll,Math.max(map.getZoom(),17),{animate:true}); updateNav(); }
+  checkNearbyReports();
+}
+function onPosErr(e){ if(e.code===1) toast(tr().locDenied); }
+if('geolocation' in navigator) navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+$('#btnLoc').onclick=()=>{ if(userPos){ follow=true; map.setView(userPos,Math.max(map.getZoom(),16)); } else toast(tr().locWait); };
+map.on('dragstart',()=>{ follow=false; });
+
+/* ============ SEARCH ============ */
+let searchTimer, searchSeq=0;
+async function doSearch(){
+  const q=$('#q').value.trim(); const box=$('#results');
+  if(q.length<2){ box.style.display='none'; return; }
+  const seq=++searchSeq;
+  try{
+    const url='https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=iq&limit=7&addressdetails=0'
+      +'&accept-language='+(isKu()?'ckb,ar,en':'en,ar')+'&q='+encodeURIComponent(q);
+    const res=await (await fetch(url)).json();
+    if(seq!==searchSeq) return;
+    box.innerHTML='';
+    if(!res.length){ box.innerHTML='<div class="none">'+tr().noRes+'</div>'; }
+    res.forEach(r=>{
+      const parts=r.display_name.split(',');
+      const d=document.createElement('div');
+      d.innerHTML='<b></b><small></small>';
+      d.firstChild.textContent=parts[0]; d.lastChild.textContent=parts.slice(1,4).join(',');
+      d.onclick=()=>{ box.style.display='none'; $('#q').blur(); setDest([+r.lat,+r.lon],parts[0]); };
+      box.appendChild(d);
+    });
+    box.style.display='block';
+  }catch(e){ toast(tr().routeErr); }
+}
+$('#q').addEventListener('input',()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(doSearch,600); });
+$('#q').addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(searchTimer); doSearch(); } });
+$('#btnGo').onclick=()=>{ clearTimeout(searchTimer); doSearch(); };
+map.on('click',()=>{ $('#results').style.display='none'; });
+map.on('contextmenu',e=>setDest([e.latlng.lat,e.latlng.lng],tr().dest));
+
+/* ============ ROUTING ============ */
+function setDest(ll,name){
+  dest={ll,name};
+  if(destMarker) destMarker.remove();
+  destMarker=L.marker(ll,{icon:L.divIcon({className:'',iconSize:[34,34],iconAnchor:[17,34],html:'<div style="font-size:34px;line-height:34px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))">📍</div>'})}).addTo(map);
+  if(!userPos){ toast(tr().locWait); map.setView(ll,14); return; }
+  fetchRoute(userPos,ll,true);
+}
+async function fetchRoute(from,to,fit){
+  try{
+    const url='https://router.project-osrm.org/route/v1/driving/'+from[1]+','+from[0]+';'+to[1]+','+to[0]
+      +'?overview=full&geometries=geojson&steps=true&alternatives=true';
+    const j=await (await fetch(url)).json();
+    if(j.code!=='Ok') throw new Error(j.code);
+    routes=j.routes.slice(0,3).map(r=>({
+      dist:r.distance, dur:r.duration,
+      line:r.geometry.coordinates.map(c=>[c[1],c[0]]),
+      steps:r.legs.flatMap(l=>l.steps)
+    }));
+    selRoute=0; drawRoutes(fit); renderRouteInfo();
+    $('#sheet').style.display='block';
+    return true;
+  }catch(e){ toast(tr().routeErr); return false; }
+}
+function drawRoutes(fit){
+  routeLayers.forEach(l=>l.remove()); routeLayers=[];
+  routes.forEach((r,i)=>{
+    if(navigating && i!==selRoute) return;
+    const sel=i===selRoute;
+    const pl=L.polyline(r.line,{color:sel?'#0b6cff':'#8a99b3',weight:sel?8:6,opacity:sel?.95:.7}).addTo(map);
+    pl.on('click',()=>{ if(navigating) return; selRoute=i; drawRoutes(false); renderRouteInfo(); });
+    routeLayers.push(pl); if(sel) pl.bringToFront();
+  });
+  if(fit && routeLayers[selRoute]) map.fitBounds(routeLayers[selRoute].getBounds(),{paddingTopLeft:[30,110],paddingBottomRight:[30,230]});
+}
+function renderRouteInfo(){
+  const r=routes[selRoute]; if(!r) return;
+  $('#sEta').textContent=fmtTime(r.dur,tr(),isKu())+' · '+fmtDist(r.dist,tr(),isKu());
+  const arr=new Date(Date.now()+r.dur*1000);
+  const hh=arr.getHours().toString().padStart(2,'0')+':'+arr.getMinutes().toString().padStart(2,'0');
+  $('#sSub').textContent=(dest?dest.name+' · ':'')+tr().arriveAt+' '+N(hh);
+  const alts=$('#alts'); alts.innerHTML='';
+  if(routes.length>1 && !navigating) routes.forEach((x,i)=>{
+    const b=document.createElement('button'); b.className=i===selRoute?'sel':'';
+    b.textContent=(i===0?tr().fast:tr().alt)+' · '+fmtTime(x.dur,tr(),isKu());
+    b.onclick=()=>{ selRoute=i; drawRoutes(false); renderRouteInfo(); }; alts.appendChild(b);
+  });
+  const st=$('#steps'); st.innerHTML='';
+  r.steps.forEach(s=>{
+    const d=document.createElement('div');
+    d.innerHTML='<i></i><span></span><em></em>';
+    d.children[0].textContent=maneuverIcon(s); d.children[1].textContent=instruction(s,tr());
+    d.children[2].textContent=s.distance?fmtDist(s.distance,tr(),isKu()):''; st.appendChild(d);
+  });
+}
+$('#btnSteps').onclick=()=>{ const s=$('#steps'); s.style.display=s.style.display==='block'?'none':'block'; };
+
+/* ============ NAVIGATION ============ */
+async function startNav(){
+  const r=routes[selRoute]; if(!r) return;
+  navigating=true; follow=true; stepIdx=0; ann={}; offCount=0; alerted.clear();
+  drawRoutes(false);
+  $('#top').style.display='none'; $('#navbar').style.display='flex';
+  $('#btnStart').style.display='none'; $('#btnStop').style.display='';
+  $('#btnSteps').style.display=''; $('#steps').style.display='none';
+  renderRouteInfo();
+  try{ if('wakeLock' in navigator) wakeLock=await navigator.wakeLock.request('screen'); }catch(e){}
+  if(userPos) map.setView(userPos,17);
+  speak(r.steps[0]); updateNav(true);
+}
+function stopNav(msg){
+  navigating=false; follow=false; speechSynthesis&&speechSynthesis.cancel();
+  $('#top').style.display=''; $('#navbar').style.display='none';
+  $('#btnStart').style.display=''; $('#btnStop').style.display='none';
+  if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock=null; }
+  routes=[]; drawRoutes(false); $('#sheet').style.display='none';
+  if(destMarker){ destMarker.remove(); destMarker=null; } dest=null;
+  if(msg) toast(msg,4000);
+}
+$('#btnStart').onclick=startNav;
+$('#btnStop').onclick=()=>stopNav();
+
+async function updateNav(force){
+  const r=routes[selRoute]; if(!r||!userPos) return;
+  // off-route detection
+  if(!force){
+    const off=distToLine(userPos,r.line);
+    offCount = off>60 ? offCount+1 : 0;
+    if(offCount>=3 && Date.now()-lastReroute>10000 && dest){
+      lastReroute=Date.now(); offCount=0; toast(tr().rerouting,2000);
+      const ok=await fetchRoute(userPos,dest.ll,false);
+      if(ok){ stepIdx=0; ann={}; drawRoutes(false); $('#sheet').style.display='block';
+        $('#btnStart').style.display='none'; $('#btnStop').style.display=''; speak(routes[selRoute].steps[0]); }
+      return;
+    }
+  }
+  const steps=r.steps, last=steps.length-1;
+  // advance to the next maneuver
+  while(stepIdx+1<last && haversine(userPos,[steps[stepIdx+1].maneuver.location[1],steps[stepIdx+1].maneuver.location[0]])<25) stepIdx++;
+  const nxt=steps[Math.min(stepIdx+1,last)];
+  const nl=[nxt.maneuver.location[1],nxt.maneuver.location[0]];
+  const d=haversine(userPos,nl);
+  if(stepIdx+1>=last && d<30){ stopNav(tr().arrived); speak(null,instruction(nxt,T[pickVoice().l])); return; }
+  $('#nIco').textContent=maneuverIcon(nxt);
+  $('#nDist').textContent=fmtDist(d,tr(),isKu());
+  $('#nIns').textContent=instruction(nxt,tr());
+  // voice prompts
+  const key=stepIdx;
+  ann[key]=ann[key]||{};
+  if(d<350 && !ann[key].a){ ann[key].a=1; speakDist(nxt,d); }
+  else if(d<60 && !ann[key].b){ ann[key].b=1; speak(nxt); }
+  // remaining
+  let rem=d; for(let j=stepIdx+1;j<=last;j++) rem+=steps[j].distance||0;
+  const sec=rem*(r.dur/Math.max(r.dist,1));
+  $('#sEta').textContent=fmtTime(sec,tr(),isKu())+' · '+fmtDist(rem,tr(),isKu());
+  const arr=new Date(Date.now()+sec*1000);
+  $('#sSub').textContent=(dest?dest.name+' · ':'')+tr().arriveAt+' '+N(arr.getHours().toString().padStart(2,'0')+':'+arr.getMinutes().toString().padStart(2,'0'));
+}
+
+/* ============ REPORTS (Supabase or local) ============ */
+let sb=null;
+try{ if(SUPABASE_URL&&SUPABASE_KEY&&window.supabase) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
+const LS_KEY='rebar_reports';
+function lsLoad(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
+function lsSave(a){ localStorage.setItem(LS_KEY,JSON.stringify(a)); }
+
+async function loadReports(){
+  const now=Date.now();
+  if(sb){
+    const since=new Date(now-REPORT_TTL_MS).toISOString();
+    const {data,error}=await sb.from('reports').select('*').gte('created_at',since).limit(800);
+    if(!error&&data) reports=data;
+  } else reports=lsLoad().filter(r=>reportAlive(r,now));
+  if(!sb) lsSave(reports);
+  renderReports();
+}
+function renderReports(){
+  const now=Date.now(), keep=new Set();
+  reports.filter(r=>reportAlive(r,now)&&RTYPES[r.type]).forEach(r=>{
+    keep.add(r.id);
+    let m=reportMarkers.get(r.id);
+    if(!m){
+      m=L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',iconSize:[36,36],iconAnchor:[18,18],html:'<div class="rm">'+RTYPES[r.type]+'</div>'})}).addTo(map);
+      reportMarkers.set(r.id,m);
+    }
+    const mins=Math.max(1,Math.round((now-new Date(r.created_at).getTime())/60000));
+    const wrap=document.createElement('div'); wrap.className='pop';
+    wrap.innerHTML='<b></b><small></small><button class="ok" data-v="c"></button><button data-v="d"></button>';
+    wrap.children[0].textContent=RTYPES[r.type]+' '+tr()[r.type];
+    wrap.children[1].textContent=N(mins)+' '+tr().min+' · '+N(r.confirms||0)+' '+tr().confirms;
+    wrap.children[2].textContent='👍 '+tr().stillThere; wrap.children[3].textContent='👎 '+tr().gone;
+    wrap.onclick=e=>{ const v=e.target.dataset&&e.target.dataset.v; if(v){ vote(r.id,v); map.closePopup(); } };
+    m.bindPopup(wrap);
+  });
+  reportMarkers.forEach((m,id)=>{ if(!keep.has(id)){ m.remove(); reportMarkers.delete(id); } });
+}
+async function addReport(type){
+  const ll=userPos||[map.getCenter().lat,map.getCenter().lng];
+  const rec={type,lat:+ll[0].toFixed(6),lng:+ll[1].toFixed(6),confirms:0,denies:0,created_at:new Date().toISOString()};
+  if(sb){
+    const {data,error}=await sb.from('reports').insert({type:rec.type,lat:rec.lat,lng:rec.lng}).select().single();
+    if(error){ toast(error.message); return; }
+    reports.push(data);
+  } else {
+    rec.id='l'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    reports.push(rec); lsSave(reports);
+    toast(tr().offline,3500);
+  }
+  renderReports();
+}
+async function vote(id,v){
+  const r=reports.find(x=>x.id===id); if(!r) return;
+  if(v==='c') r.confirms=(r.confirms||0)+1; else r.denies=(r.denies||0)+1;
+  if(sb) await sb.from('reports').update({confirms:r.confirms,denies:r.denies}).eq('id',id);
+  else lsSave(reports);
+  renderReports();
+}
+function buildGrid(){
+  const g=$('#grid'); g.innerHTML='';
+  Object.keys(RTYPES).forEach(k=>{
+    const b=document.createElement('button'); b.innerHTML='<i></i><span></span>';
+    b.children[0].textContent=RTYPES[k]; b.children[1].textContent=tr()[k];
+    b.onclick=()=>{
+      const now=Date.now();
+      if(now-(+localStorage.getItem('rebar_lastrep')||0)<20000){ toast(tr().wait); return; }
+      localStorage.setItem('rebar_lastrep',String(now));
+      $('#modal').style.display='none'; addReport(k); toast(tr().reported);
+    };
+    g.appendChild(b);
+  });
+}
+$('#btnRep').onclick=()=>{ $('#modal').style.display='flex'; };
+$('#btnCancel').onclick=()=>{ $('#modal').style.display='none'; };
+$('#modal').onclick=e=>{ if(e.target.id==='modal') $('#modal').style.display='none'; };
+
+// alert about reports ahead while navigating
+function checkNearbyReports(){
+  if(!navigating||!userPos) return;
+  const now=Date.now(), r=routes[selRoute]; if(!r) return;
+  for(const rp of reports){
+    if(alerted.has(rp.id)||!reportAlive(rp,now)||!RTYPES[rp.type]) continue;
+    const d=haversine(userPos,[rp.lat,rp.lng]);
+    if(d<400 && distToLine([rp.lat,rp.lng],r.line)<60){
+      alerted.add(rp.id);
+      $('#wIco').textContent=RTYPES[rp.type];
+      $('#wTxt').textContent=tr()[rp.type]+' · '+fmtDist(d,tr(),isKu())+' '+tr().ahead;
+      $('#warn').style.display='flex'; setTimeout(()=>$('#warn').style.display='none',6000);
+      const {l}=pickVoice(); speak(null,T[l][rp.type]+', '+(d<1000?Math.round(d/10)*10+' '+T[l].m:'')+' '+T[l].ahead);
+      break;
+    }
+  }
+}
+
+/* ============ INIT ============ */
+if(sb){
+  loadReports();
+  sb.channel('reports-live').on('postgres_changes',{event:'*',schema:'public',table:'reports'},()=>loadReports()).subscribe();
+} else loadReports();
+setInterval(()=>{ sb?loadReports():renderReports(); },60000);
+applyTheme(); applyLang();
+</script>
+</body>
+</html>
